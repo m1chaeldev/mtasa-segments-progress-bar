@@ -1,1 +1,1 @@
-export {default } from './SegmentsProgressBar'
+export { default } from "./SegmentsProgressBar";

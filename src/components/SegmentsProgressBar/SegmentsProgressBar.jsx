@@ -9,6 +9,10 @@ function useSegmentsProgressBar({
   onLevelUp,
   segmentClassName = "",
   progressBarClassName = "",
+  borderRadius = 4,
+  gap = 2,
+  segmentWidth = 30,
+  segmentHeight = 18,
 }) {
   let xp = initXP;
   let nextLevelXP = initNextLevelXP;
@@ -93,14 +97,31 @@ function useSegmentsProgressBar({
   };
 
   const SegmentsProgressBarComponent = () => {
+    const segmentsArr = Array.from(Array(segments).keys());
+    const firstElementBorderRadius = `${borderRadius}px 0px 0px ${borderRadius}px`;
+    const lastElementBorderRadius = `0px ${borderRadius}px ${borderRadius}px 0px`;
+
     return (
       <div>
-        <div id="segments-bar" className="row">
-          {Array.from(Array(segments).keys()).map((_, i) => (
-            <div className={`segment ${segmentClassName}`} key={i.toString()}>
+        <div id="segments-bar" className="row" style={{ gap }}>
+          {segmentsArr.map((_, i) => (
+            <div
+              key={i.toString()}
+              className={`segment ${segmentClassName}`}
+              style={{
+                borderRadius:
+                  i === 0
+                    ? firstElementBorderRadius
+                    : i === segmentsArr.length - 1
+                    ? lastElementBorderRadius
+                    : 0,
+                width: segmentWidth,
+                height: segmentHeight,
+              }}
+            >
               <div
-                className={`progress-bar ${progressBarClassName}`}
                 id={generateSegmentsBarId(i)}
+                className={`progress-bar ${progressBarClassName}`}
               />
             </div>
           ))}
