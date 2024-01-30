@@ -1,6 +1,5 @@
 import DefaultProgressBar from "./example/DefaultProgressBar";
 import GreenProgressBar from "./example/GreenProgressBar";
-import SegmentsProgressBarState from "./components/SegmentsProgressBarState";
 
 const MainApp = () => {
   return (
@@ -8,7 +7,6 @@ const MainApp = () => {
       <GreenProgressBar />
       <div style={{ marginTop: 50 }} />
       <DefaultProgressBar />
-      <SegmentsProgressBarState />
     </div>
   );
 };

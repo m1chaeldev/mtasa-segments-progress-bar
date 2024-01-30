@@ -1,8 +1,7 @@
-import useSegmentsProgressBar from "../../components/SegmentsProgressBar/SegmentsProgressBar";
+import useSegmentsProgressBar from "../../components/SegmentsProgressBar";
 
 const DefaultProgressBar = () => {
   const defaultBar = useSegmentsProgressBar({
-    id: "default-bar",
     segments: 8,
     initXP: 2200,
     initNextLevelXP: 5000,
@@ -21,7 +20,7 @@ const DefaultProgressBar = () => {
           defaultBar.giveXP(Math.floor(Math.random() * 1000) + 500);
         }}
       >
-        Give random xp for Default-Bar
+        Add random xp for Default-Bar
       </button>
     </div>
   );

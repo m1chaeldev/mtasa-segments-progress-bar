@@ -1,8 +1,18 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./SegmentsProgressBar.css";
 
-function useSegmentsProgressBar({
-  id,
+const getProgressBarWidthKey = (index) => `progress-bar-${index}`;
+
+const getDefaultProgressBarWidth = (segments) => {
+  let s = {};
+  for (let index = 0; index < segments; index++) {
+    s[getProgressBarWidthKey(index)] = 0;
+  }
+
+  return s;
+};
+
+const useSegmentsProgressBar = ({
   segments,
   initXP,
   initNextLevelXP,
@@ -13,119 +23,112 @@ function useSegmentsProgressBar({
   gap = 2,
   segmentWidth = 30,
   segmentHeight = 18,
-}) {
-  let xp = initXP;
-  let nextLevelXP = initNextLevelXP;
-  let addScore = 0;
-  let updateScorePerSecondAmount = 0;
-  const elementId = id;
+}) => {
+  const segmentsArr = Array.from(Array(segments).keys());
+  const [progressBarWidths, setProgressBarWidths] = useState(
+    getDefaultProgressBarWidth(segments)
+  );
+  const [playerXP, setPlayerXP] = useState(initXP);
+  const [nextLevelXP, setNextLevelXP] = useState(initNextLevelXP);
+  const [restXP, setRestXP] = useState(0);
+  const [isLevelUp, setIsLevelUp] = useState(false);
+  const requestRef = useRef();
+  let currentXP = playerXP;
+  let giveAmount = 0;
+
+  const fillSegment = () => {
+    const max1SegmentXP = nextLevelXP / segments;
+    const filled = currentXP / max1SegmentXP;
+    const indexToFill = Math.floor(filled);
+    const filledPercent = (filled - indexToFill) * 100;
+    let newProgressBarWidths = {};
+
+    for (let index = 0; index < segments; index++) {
+      newProgressBarWidths[getProgressBarWidthKey(index)] =
+        index < indexToFill ? 100 : index > indexToFill ? 0 : filledPercent;
+    }
+    setProgressBarWidths(newProgressBarWidths);
+  };
+
+  const animate = () => {
+    if (giveAmount <= 0) {
+      requestRef.current = undefined;
+      return;
+    }
+
+    const updateScorePerSecond = giveAmount >= 10 ? 10 : giveAmount;
+
+    if (currentXP + updateScorePerSecond >= nextLevelXP) {
+      setIsLevelUp(true);
+      setRestXP(giveAmount);
+      requestRef.current = undefined;
+
+      if (isLevelUp) {
+        onLevelUp();
+        setIsLevelUp(false);
+      }
+      return;
+    }
+
+    giveAmount -= updateScorePerSecond;
+    currentXP += updateScorePerSecond;
+    setPlayerXP((c) => c + updateScorePerSecond);
+    fillSegment();
+
+    if (requestRef.current) requestAnimationFrame(requestRef.current);
+  };
+
+  const giveXP = (value) => {
+    giveAmount = value;
+    requestRef.current = animate;
+    requestAnimationFrame(requestRef.current);
+  };
 
   useEffect(() => {
-    checkToFillSegmentBars();
+    fillSegment();
   }, []);
 
-  const generateSegmentsBarId = (index) => {
-    return `${elementId}-${index}`;
-  };
-
-  const giveXP = (value = addScore) => {
-    if (addScore === 0) {
-      updateScorePerSecondAmount = Math.round(value / 50) || 1;
-      addScore = value;
-      checkToFillSegmentBars();
-      return giveXP();
+  useEffect(() => {
+    if (restXP > 0) {
+      setPlayerXP(0);
+      setRestXP(0);
+      giveXP(restXP);
     }
-
-    const updateXPWithAnimation = () => {
-      addScore -= updateScorePerSecondAmount;
-      xp += updateScorePerSecondAmount;
-
-      // Up level
-      if (xp >= nextLevelXP) {
-        const restScore = addScore;
-        resetProgressBar();
-        giveXP(restScore);
-        onLevelUp();
-        return;
-      }
-
-      checkToFillSegmentBars();
-
-      if (addScore <= 0) {
-        addScore = 0;
-        return;
-      } else requestAnimationFrame(updateXPWithAnimation);
-    };
-
-    updateXPWithAnimation();
-  };
-
-  const checkToFillSegmentBars = () => {
-    const current = xp,
-      next = nextLevelXP;
-    const segmentProgress = 100 / segments;
-    const currentPercent = (current * 100) / next;
-    const filled = Math.floor(currentPercent / segmentProgress);
-
-    for (let index = 0; index < segments; index++) {
-      const segmentsBarId = generateSegmentsBarId(index);
-      if (index === 0 && filled === 0) {
-        const p = (currentPercent / segmentProgress) * 100;
-        document.getElementById(segmentsBarId).style.width = p + "%";
-        break;
-      }
-
-      if (filled - index >= 1) {
-        document.getElementById(segmentsBarId).style.width = "100%";
-      } else {
-        const p = ((currentPercent / segmentProgress) % filled) * 100;
-        document.getElementById(segmentsBarId).style.width = p + "%";
-        break;
-      }
-    }
-  };
-
-  const resetProgressBar = () => {
-    updateScorePerSecondAmount = 0;
-    xp = 0;
-    addScore = 0;
-
-    for (let index = 0; index < segments; index++) {
-      const el = document.getElementById(generateSegmentsBarId(index));
-      if (el) el.style.width = 0 + "%";
-    }
-  };
+  }, [restXP]);
 
   const SegmentsProgressBarComponent = () => {
-    const segmentsArr = Array.from(Array(segments).keys());
     const firstElementBorderRadius = `${borderRadius}px 0px 0px ${borderRadius}px`;
     const lastElementBorderRadius = `0px ${borderRadius}px ${borderRadius}px 0px`;
 
+    const getSegmentStyles = (i) => ({
+      borderRadius:
+        i === 0
+          ? firstElementBorderRadius
+          : i === segmentsArr.length - 1
+          ? lastElementBorderRadius
+          : 0,
+      width: segmentWidth,
+      height: segmentHeight,
+    });
+
+    const getProgressBarStyles = (i) => ({
+      width: progressBarWidths[getProgressBarWidthKey(i)] + "%",
+    });
+
     return (
-      <div>
-        <div id="segments-bar" className="row" style={{ gap }}>
-          {segmentsArr.map((_, i) => (
+      <div className="row" style={{ gap }}>
+        {segmentsArr.map((_, i) => (
+          <div
+            key={i.toString()}
+            className={`segment ${segmentClassName}`}
+            style={getSegmentStyles(i)}
+          >
             <div
-              key={i.toString()}
-              className={`segment ${segmentClassName}`}
-              style={{
-                borderRadius:
-                  i === 0
-                    ? firstElementBorderRadius
-                    : i === segmentsArr.length - 1
-                    ? lastElementBorderRadius
-                    : 0,
-                width: segmentWidth,
-                height: segmentHeight,
-              }}
-            >
-              <div
-                id={generateSegmentsBarId(i)}
-                className={`progress-bar ${progressBarClassName}`}
-              />
-            </div>
-          ))}
-        </div>
+              className={`progress-bar ${progressBarClassName}`}
+              style={getProgressBarStyles(i)}
+            />
+          </div>
+        ))}
       </div>
     );
   };
@@ -133,10 +136,11 @@ function useSegmentsProgressBar({
   return {
     SegmentsProgressBar: SegmentsProgressBarComponent,
     giveXP,
-    xp,
+    playerXP,
     nextLevelXP,
+    setNextLevelXP,
     segments,
   };
-}
+};
 
 export default useSegmentsProgressBar;
